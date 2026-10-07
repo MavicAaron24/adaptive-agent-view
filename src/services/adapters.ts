@@ -23,11 +23,11 @@ export function adaptRun(value: unknown): ExecutionModel {
   const results = array(r['research_results']).map(record);
   const tasks: ExecutionTask[] = rawTasks.map((value, index) => {
     const t = record(value); const data = record(t['data']); const id = text(t['id'] ?? t['task_id']) || `task-${index}`;
-    const result = results.find(v => v.subtask_id === id);
-    const ownTrace = trace.find(v => v.task_id === id || v.subtask_id === id);
+    const result = results.find(v => v['subtask_id'] === id);
+    const ownTrace = trace.find(v => v['task_id'] === id || v['subtask_id'] === id);
     const metadata = record(t['metadata']);
     const chunks = chunksFrom(t['retrieved_chunks'] ?? metadata['retrieved_chunks']);
-    return { id, title: text(t['title'] ?? data['title']) || text(t['description']).slice(0, 70) || id, description: text(t['description'] ?? data['description']), type: text(t['type'] ?? t['capability'] ?? data['type']) || 'task', capability: text(t['capability']), status: t['status'] ? normalizeStatus(t['status']) : result ? 'COMPLETED' : ownTrace ? normalizeStatus(ownTrace['status']) : 'PENDING', dependencies: array(t['dependencies'] ?? t['depends_on']).map(v => typeof v === 'string' ? v : text(record(v).id)).filter(Boolean), durationMs: numeric(t['duration_ms'] ?? ownTrace?.['duration_ms']), agent: text(t['agent'] ?? ownTrace?.['agent_name']), input: text(t['input']), output: text(t['output'] ?? result?.['findings']), metadata, chunks, query: text(t['query'] ?? metadata['query']) };
+    return { id, title: text(t['title'] ?? data['title']) || text(t['description']).slice(0, 70) || id, description: text(t['description'] ?? data['description']), type: text(t['type'] ?? t['capability'] ?? data['type']) || 'task', capability: text(t['capability']), status: t['status'] ? normalizeStatus(t['status']) : result ? 'COMPLETED' : ownTrace ? normalizeStatus(ownTrace['status']) : 'PENDING', dependencies: array(t['dependencies'] ?? t['depends_on']).map(v => typeof v === 'string' ? v : text(record(v)['id'])).filter(Boolean), durationMs: numeric(t['duration_ms'] ?? ownTrace?.['duration_ms']), agent: text(t['agent'] ?? ownTrace?.['agent_name']), input: text(t['input']), output: text(t['output'] ?? result?.['findings']), metadata, chunks, query: text(t['query'] ?? metadata['query']) };
   });
   for (const value of array(graph['edges'] ?? r['edges'])) { const e = record(value); const target = tasks.find(t => t['id'] === text(e['target'] ?? e['to'])); const source = text(e['source'] ?? e['from']); if (target && source && tasks.some(t => t['id'] === source) && !target.dependencies.includes(source)) target.dependencies.push(source); }
   if (!explicit.length) {
