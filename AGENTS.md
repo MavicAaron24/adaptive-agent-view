@@ -14,3 +14,4 @@
 - Model declared dependencies only in execution view, and keep conceptual architecture separate; baseline responses do not prove dependency order or parallelism.
 - Consume returned traces through `ExecutionEventSource` and label them post-run; keep any demo playback isolated to prevent simulated telemetry being mistaken for real execution.
 - Mount the control plane at the index route and constrain page overflow globally; only graph interaction and console/inspector regions scroll internally.
+- Render execution particles in a custom React Flow edge only for declared dependencies into a returned running task from a completed task; animation never mutates task state or implies a live stream.
