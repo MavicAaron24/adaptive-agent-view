@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { applyNodeChanges, Background, BackgroundVariant, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, MarkerType, type Edge } from '@xyflow/react';
+import { applyNodeChanges, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import { Crosshair, Maximize, Minus, Plus, Scan, Network } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TaskNode, type TaskFlowNode } from './TaskNode';
+import { ExecutionEdge, type ExecutionFlowEdge } from './ExecutionEdge';
 import type { ExecutionTask } from '@/types/execution';
 import '@xyflow/react/dist/style.css';
 const nodeTypes = { task: TaskNode };
+const edgeTypes = { execution: ExecutionEdge };
 interface Props { tasks: ExecutionTask[]; conceptual: boolean; selectedId?: string | undefined; onSelect: (task: ExecutionTask) => void }
 function layout(tasks: ExecutionTask[], conceptual: boolean): TaskFlowNode[] {
   const levels = new Map<string, number>();
@@ -22,7 +24,7 @@ function layout(tasks: ExecutionTask[], conceptual: boolean): TaskFlowNode[] {
   if (conceptual) { ['user', 'api'].forEach(id => levels.set(id, 0)); levels.set('planner', 1); levels.set('graph', 1); levels.set('orchestrator', 2); ['agents', 'tools', 'rag'].forEach(id => levels.set(id, 3)); levels.set('evaluator', 4); levels.set('synthesis', 5); }
   const grouped = new Map<number, ExecutionTask[]>();
   tasks.forEach(t => { const level = levels.get(t.id) ?? 0; grouped.set(level, [...(grouped.get(level) ?? []), t]); });
-  return tasks.map(t => { const level = levels.get(t.id) ?? 0; const lane = grouped.get(level) ?? []; const index = lane.findIndex(v => v.id === t.id); return { id: t.id, type: 'task', position: { x: level * 255, y: (index - (lane.length - 1) / 2) * 215 + 270 }, data: { task: t, conceptual } }; });
+  return tasks.map(t => { const level = levels.get(t.id) ?? 0; const lane = grouped.get(level) ?? []; const index = lane.findIndex(v => v.id === t.id); return { id: t.id, type: 'task', position: { x: level * 242, y: (index - (lane.length - 1) / 2) * 162 + 270 }, data: { task: t, conceptual } }; });
 }
 function GraphInner({ tasks, conceptual, selectedId, onSelect }: Props) {
   const flow = useReactFlow<TaskFlowNode>();
@@ -30,9 +32,8 @@ function GraphInner({ tasks, conceptual, selectedId, onSelect }: Props) {
   const initialNodes = useMemo(() => layout(tasks, conceptual), [tasks, conceptual]);
   const [nodes, setNodes] = useState(initialNodes);
   useEffect(() => { setNodes(initialNodes); const timer = setTimeout(() => flow.fitView({ padding: .12, duration: 350, maxZoom: 1 }), 70); return () => clearTimeout(timer); }, [initialNodes, flow]);
-  const edges: Edge[] = useMemo(() => tasks.flatMap(t => t.dependencies.filter(id => tasks.some(task => task.id === id)).map(id => ({ id: `${id}-${t.id}`, source: id, target: t.id, type: 'smoothstep', animated: t.status === 'RUNNING', className: selectedId && (selectedId === id || selectedId === t.id) ? 'edge-highlighted' : '', markerEnd: { type: MarkerType.ArrowClosed, width: 15, height: 15 } }))), [tasks, selectedId]);
-  return <div className="graph-surface"><ReactFlow<TaskFlowNode> nodes={nodes.map(n => ({ ...n, selected: n.id === selectedId }))} edges={edges} nodeTypes={nodeTypes} onNodesChange={changes => setNodes(current => applyNodeChanges(changes, current))} onNodeClick={(_, node) => onSelect(node.data.task)} onMove={(_, viewport) => setZoom(Math.round(viewport.zoom * 100))} fitView minZoom={.15} maxZoom={1.8} nodesConnectable={false} deleteKeyCode={null} proOptions={{ hideAttribution: true }}>
-    <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+  const edges: ExecutionFlowEdge[] = useMemo(() => tasks.flatMap(t => t.dependencies.filter(id => tasks.some(task => task.id === id)).map(id => ({ id: `${id}-${t.id}`, source: id, target: t.id, type: 'execution', selected: Boolean(selectedId && (selectedId === id || selectedId === t.id)), data: { active: !conceptual && t.status === 'RUNNING' && tasks.some(source => source.id === id && source.status === 'COMPLETED'), completed: !conceptual && t.status === 'COMPLETED' && tasks.some(source => source.id === id && source.status === 'COMPLETED') } }))), [tasks, selectedId, conceptual]);
+  return <div className="graph-surface"><ReactFlow<TaskFlowNode, ExecutionFlowEdge> nodes={nodes.map(n => ({ ...n, selected: n.id === selectedId }))} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={changes => setNodes(current => applyNodeChanges(changes, current))} onNodeClick={(_, node) => onSelect(node.data.task)} onMove={(_, viewport) => setZoom(Math.round(viewport.zoom * 100))} fitView minZoom={.15} maxZoom={1.8} nodesConnectable={false} deleteKeyCode={null} proOptions={{ hideAttribution: true }}>
     <MiniMap pannable zoomable nodeBorderRadius={3} nodeStrokeWidth={0} />
   </ReactFlow>
   {!tasks.length && <div className="graph-empty"><Network size={35}/><h2>Ready for your next task</h2><p>No execution graph yet</p></div>}
