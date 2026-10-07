@@ -11,33 +11,33 @@ export function normalizeStatus(v: unknown): TaskStatus {
   return 'PENDING';
 }
 function chunksFrom(v: unknown): ProvenanceChunk[] {
-  return array(v).map(item => { const c = record(item); return { documentId: text(c.document_id) || undefined, chunkIndex: numeric(c.chunk_index), source: text(c.source) || undefined, content: text(c.content) || undefined, similarity: numeric(c.similarity_score ?? c.score) }; });
+  return array(v).map(item => { const c = record(item); return { documentId: text(c['document_id']) || undefined, chunkIndex: numeric(c['chunk_index']), source: text(c['source']) || undefined, content: text(c['content']) || undefined, similarity: numeric(c['similarity_score'] ?? c['score']) }; });
 }
 export function adaptRun(value: unknown): ExecutionModel {
   const r = record(value);
-  if (!text(r.run_id)) throw new Error('The response is missing a run ID. Check the backend API contract.');
-  const graph = record(r.task_graph ?? r.graph);
-  const explicit = array(graph.tasks ?? graph.nodes ?? r.tasks);
-  const rawTasks = explicit.length ? explicit : array(r.subtasks);
-  const trace = array(r.execution_trace).map(record);
-  const results = array(r.research_results).map(record);
+  if (!text(r['run_id'])) throw new Error('The response is missing a run ID. Check the backend API contract.');
+  const graph = record(r['task_graph'] ?? r['graph']);
+  const explicit = array(graph['tasks'] ?? graph['nodes'] ?? r['tasks']);
+  const rawTasks = explicit.length ? explicit : array(r['subtasks']);
+  const trace = array(r['execution_trace']).map(record);
+  const results = array(r['research_results']).map(record);
   const tasks: ExecutionTask[] = rawTasks.map((value, index) => {
-    const t = record(value); const data = record(t.data); const id = text(t.id ?? t.task_id) || `task-${index}`;
+    const t = record(value); const data = record(t['data']); const id = text(t['id'] ?? t['task_id']) || `task-${index}`;
     const result = results.find(v => v.subtask_id === id);
     const ownTrace = trace.find(v => v.task_id === id || v.subtask_id === id);
-    const metadata = record(t.metadata);
-    const chunks = chunksFrom(t.retrieved_chunks ?? metadata.retrieved_chunks);
-    return { id, title: text(t.title ?? data.title) || text(t.description).slice(0, 70) || id, description: text(t.description ?? data.description), type: text(t.type ?? t.capability ?? data.type) || 'task', capability: text(t.capability), status: t.status ? normalizeStatus(t.status) : result ? 'COMPLETED' : ownTrace ? normalizeStatus(ownTrace.status) : 'PENDING', dependencies: array(t.dependencies ?? t.depends_on).map(v => typeof v === 'string' ? v : text(record(v).id)).filter(Boolean), durationMs: numeric(t.duration_ms ?? ownTrace?.duration_ms), agent: text(t.agent ?? ownTrace?.agent_name), input: text(t.input), output: text(t.output ?? result?.findings), metadata, chunks, query: text(t.query ?? metadata.query) };
+    const metadata = record(t['metadata']);
+    const chunks = chunksFrom(t['retrieved_chunks'] ?? metadata['retrieved_chunks']);
+    return { id, title: text(t['title'] ?? data['title']) || text(t['description']).slice(0, 70) || id, description: text(t['description'] ?? data['description']), type: text(t['type'] ?? t['capability'] ?? data['type']) || 'task', capability: text(t['capability']), status: t['status'] ? normalizeStatus(t['status']) : result ? 'COMPLETED' : ownTrace ? normalizeStatus(ownTrace['status']) : 'PENDING', dependencies: array(t['dependencies'] ?? t['depends_on']).map(v => typeof v === 'string' ? v : text(record(v).id)).filter(Boolean), durationMs: numeric(t['duration_ms'] ?? ownTrace?.['duration_ms']), agent: text(t['agent'] ?? ownTrace?.['agent_name']), input: text(t['input']), output: text(t['output'] ?? result?.['findings']), metadata, chunks, query: text(t['query'] ?? metadata['query']) };
   });
-  for (const value of array(graph.edges ?? r.edges)) { const e = record(value); const target = tasks.find(t => t.id === text(e.target ?? e.to)); const source = text(e.source ?? e.from); if (target && source && tasks.some(t => t.id === source) && !target.dependencies.includes(source)) target.dependencies.push(source); }
+  for (const value of array(graph['edges'] ?? r['edges'])) { const e = record(value); const target = tasks.find(t => t['id'] === text(e['target'] ?? e['to'])); const source = text(e['source'] ?? e['from']); if (target && source && tasks.some(t => t['id'] === source) && !target.dependencies.includes(source)) target.dependencies.push(source); }
   if (!explicit.length) {
-    if (text(r.analysis)) { const tr = trace.find(t => /analy/i.test(text(t.stage_name))); tasks.push({ id: '__analysis', title: 'Analysis', description: 'Returned analytical findings', type: 'analysis', status: 'COMPLETED', dependencies: [], output: text(r.analysis), durationMs: numeric(tr?.duration_ms), agent: text(tr?.agent_name) }); }
-    const ev = record(r.evaluation);
-    if (Object.keys(ev).length) { const tr = trace.find(t => /evaluat/i.test(text(t.stage_name))); tasks.push({ id: '__evaluation', title: 'Quality evaluation', type: 'evaluation', status: ev.status === 'PASS' ? 'COMPLETED' : ev.status === 'FAIL' ? 'FAILED' : 'PENDING', dependencies: [], score: numeric(ev.score), evaluationStatus: text(ev.status), output: text(ev.feedback), durationMs: numeric(tr?.duration_ms), agent: text(tr?.agent_name) }); }
-    if (text(r.final_answer)) tasks.push({ id: '__synthesis', title: 'Final synthesis', description: 'Final answer returned by the system', type: 'synthesis', status: 'COMPLETED', dependencies: [], output: text(r.final_answer) });
+    if (text(r['analysis'])) { const tr = trace.find(t => /analy/i.test(text(t['stage_name']))); tasks.push({ id: '__analysis', title: 'Analysis', description: 'Returned analytical findings', type: 'analysis', status: 'COMPLETED', dependencies: [], output: text(r['analysis']), durationMs: numeric(tr?.['duration_ms']), agent: text(tr?.['agent_name']) }); }
+    const ev = record(r['evaluation']);
+    if (Object.keys(ev).length) { const tr = trace.find(t => /evaluat/i.test(text(t['stage_name']))); tasks.push({ id: '__evaluation', title: 'Quality evaluation', type: 'evaluation', status: ev['status'] === 'PASS' ? 'COMPLETED' : ev['status'] === 'FAIL' ? 'FAILED' : 'PENDING', dependencies: [], score: numeric(ev['score']), evaluationStatus: text(ev['status']), output: text(ev['feedback']), durationMs: numeric(tr?.['duration_ms']), agent: text(tr?.['agent_name']) }); }
+    if (text(r['final_answer'])) tasks.push({ id: '__synthesis', title: 'Final synthesis', description: 'Final answer returned by the system', type: 'synthesis', status: 'COMPLETED', dependencies: [], output: text(r['final_answer']) });
   }
-  const chunks = [...chunksFrom(r.retrieved_chunks ?? r.rag_provenance), ...tasks.flatMap(t => t.chunks ?? [])];
-  return { runId: text(r.run_id), task: text(r.user_task), tasks, chunks, finalAnswer: text(r.final_answer), createdAt: text(r.created_at), dependenciesAvailable: rawTasks.some(v => { const t = record(v); return Array.isArray(t.dependencies) || Array.isArray(t.depends_on); }) || Array.isArray(graph.edges) || Array.isArray(r.edges), events: trace.map((t, i) => ({ id: `trace-${i}`, label: text(t.stage_name).toUpperCase() || 'STAGE', message: [text(t.agent_name), text(t.summary)].filter(Boolean).join(' · '), source: 'POST-RUN', durationMs: numeric(t.duration_ms), status: normalizeStatus(t.status) })) };
+  const chunks = [...chunksFrom(r['retrieved_chunks'] ?? r['rag_provenance']), ...tasks.flatMap(t => t['chunks'] ?? [])];
+  return { runId: text(r['run_id']), task: text(r['user_task']), tasks, chunks, finalAnswer: text(r['final_answer']), createdAt: text(r['created_at']), dependenciesAvailable: rawTasks.some(v => { const t = record(v); return Array.isArray(t['dependencies']) || Array.isArray(t['depends_on']); }) || Array.isArray(graph['edges']) || Array.isArray(r['edges']), events: trace.map((t, i) => ({ id: `trace-${i}`, label: text(t['stage_name']).toUpperCase() || 'STAGE', message: [text(t['agent_name']), text(t['summary'])].filter(Boolean).join(' · '), source: 'POST-RUN', durationMs: numeric(t['duration_ms']), status: normalizeStatus(t['status']) })) };
 }
 export const architectureTasks: ExecutionTask[] = [
   { id: 'user', title: 'User task', description: 'Complex analytical request', type: 'input', dependencies: [] },

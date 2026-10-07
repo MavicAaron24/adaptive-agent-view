@@ -6,7 +6,7 @@ import { TaskNode, type TaskFlowNode } from './TaskNode';
 import type { ExecutionTask } from '@/types/execution';
 import '@xyflow/react/dist/style.css';
 const nodeTypes = { task: TaskNode };
-interface Props { tasks: ExecutionTask[]; conceptual: boolean; selectedId?: string; onSelect: (task: ExecutionTask) => void }
+interface Props { tasks: ExecutionTask[]; conceptual: boolean; selectedId?: string | undefined; onSelect: (task: ExecutionTask) => void }
 function layout(tasks: ExecutionTask[], conceptual: boolean): TaskFlowNode[] {
   const levels = new Map<string, number>();
   const getLevel = (id: string, path: Set<string>): number => {
@@ -31,7 +31,7 @@ function GraphInner({ tasks, conceptual, selectedId, onSelect }: Props) {
   const [nodes, setNodes] = useState(initialNodes);
   useEffect(() => { setNodes(initialNodes); const timer = setTimeout(() => flow.fitView({ padding: .12, duration: 350, maxZoom: 1 }), 70); return () => clearTimeout(timer); }, [initialNodes, flow]);
   const edges: Edge[] = useMemo(() => tasks.flatMap(t => t.dependencies.filter(id => tasks.some(task => task.id === id)).map(id => ({ id: `${id}-${t.id}`, source: id, target: t.id, type: 'smoothstep', animated: t.status === 'RUNNING', className: selectedId && (selectedId === id || selectedId === t.id) ? 'edge-highlighted' : '', markerEnd: { type: MarkerType.ArrowClosed, width: 15, height: 15 } }))), [tasks, selectedId]);
-  return <div className="graph-surface"><ReactFlow<TaskFlowNode> nodes={nodes.map(n => ({ ...n, selected: n.id === selectedId }))} edges={edges} nodeTypes={nodeTypes} onNodesChange={changes => setNodes(current => current.map(n => { const change = changes.find(c => c.id === n.id && c.type === 'position'); return change?.type === 'position' && change.position ? { ...n, position: change.position } : n; }))} onNodeClick={(_, node) => onSelect(node.data.task)} onMove={(_, viewport) => setZoom(Math.round(viewport.zoom * 100))} fitView minZoom={.15} maxZoom={1.8} nodesConnectable={false} deleteKeyCode={null} proOptions={{ hideAttribution: true }}>
+  return <div className="graph-surface"><ReactFlow<TaskFlowNode> nodes={nodes.map(n => ({ ...n, selected: n.id === selectedId }))} edges={edges} nodeTypes={nodeTypes} onNodesChange={changes => setNodes(current => current.map(n => { const change = changes.find(c => c.type === 'position' && c.id === n.id); return change?.type === 'position' && change.position ? { ...n, position: change.position } : n; }))} onNodeClick={(_, node) => onSelect(node.data.task)} onMove={(_, viewport) => setZoom(Math.round(viewport.zoom * 100))} fitView minZoom={.15} maxZoom={1.8} nodesConnectable={false} deleteKeyCode={null} proOptions={{ hideAttribution: true }}>
     <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
     <MiniMap pannable zoomable nodeBorderRadius={3} nodeStrokeWidth={0} />
   </ReactFlow>

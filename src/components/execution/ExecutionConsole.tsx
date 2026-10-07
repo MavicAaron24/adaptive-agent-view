@@ -5,7 +5,7 @@ import { Activity, ArrowUpRight, Check, ChevronRight, Copy, Database, FileText, 
 import { Button } from '@/components/ui/button';
 import type { ExecutionEvent, ExecutionModel, ExecutionTask } from '@/types/execution';
 export type InspectorTab = 'synthesis' | 'node' | 'rag';
-interface Props { events: ExecutionEvent[]; run?: ExecutionModel; selected?: ExecutionTask; tab: InspectorTab; setTab: (tab: InspectorTab) => void; running: boolean }
+interface Props { events: ExecutionEvent[]; run?: ExecutionModel | undefined; selected?: ExecutionTask | undefined; tab: InspectorTab; setTab: (tab: InspectorTab) => void; running: boolean }
 export function TaskDetails({ task }: { task: ExecutionTask }) {
   return <div className="task-details"><div className="detail-title"><strong>{task.title}</strong><span className={`state-text status-${task.status.toLowerCase()}`}>{task.status}</span></div><dl><dt>Task ID</dt><dd>{task.id}</dd><dt>Capability</dt><dd>{task.capability || task.type}</dd><dt>Dependencies</dt><dd>{task.dependencies.length ? task.dependencies.join(', ') : 'Not provided'}</dd>{task.durationMs !== undefined && <><dt>Duration</dt><dd>{task.durationMs} ms</dd></>}{task.agent && <><dt>Agent</dt><dd>{task.agent}</dd></>}</dl>{task.description && <p>{task.description}</p>}{task.input && <section><h4>INPUT</h4><p>{task.input}</p></section>}{task.output && <section><h4>OUTPUT</h4><div className="markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{task.output}</ReactMarkdown></div></section>}{task.metadata && Object.keys(task.metadata).length > 0 && <section><h4>METADATA</h4><pre>{JSON.stringify(task.metadata, null, 2)}</pre></section>}</div>;
 }
